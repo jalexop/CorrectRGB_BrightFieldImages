@@ -13,11 +13,14 @@
  * Short Help 
  */
  html = "<html><h1><u>Help page for RGB images correction and Calibration Macro</u></h1><font><br><b>Requirements / Dependencies</b><br>The macro requires the Omero macro extensions from the following address:<br>"
-     +"<a href=\"https://github.com/GReD-Clermont/omero_macro-extensions/releases/tag/1.3.2/\">https://github.com/GReD-Clermont/omero_macro-extensions/releases/tag/1.3.2/</a><<br>"
-     +"<br><b>Parameters</b><br><font color=red>Saving Folder:</font> The name of the folder where the corrected images will be saved. The loaction of this folder is inside the source folder. Even if the omero upload option is selected, the resulted images will be saved locally.<br>"
-     +"<font color=red>Crop Images:</font> In case the user wants to reduce the size of images, there is the option of cropping the images (manual)<br><font color=red>Remove Background:</font> The substract background plugin is used (rolling ball of 250px expecting light background). "
-     +"This can be be a slow process depending on the image size<br><font color=red>Correction Region:</font> For the correction of RGB images a region of interest is required. The user can manually select this region (usually sample free), or the macro can select a region of 400x400 px from the corners or the center of the image<br>"
-     +"<font color=red>Objectives:</font> In order to use the correct pixel size for the images, the magnification is required (in case the EVOS ssytem is used). By selecting the --- option, the actual pixel size in um needs to be entered<br>"
+ 	 +"<a href=\"https://github.com/GReD-Clermont/omero_macro-extensions\">https://github.com/GReD-Clermont/omero_macro-extensions</a><<br>"
+     
+     +"<br><b>Parameters</b><br><font color=red>Saving Folder:</font> The name of the folder where the corrected images will be saved. The location of this folder is inside the source folder. Even if the omero upload option is selected, the resulting images will be saved locally.<br>"
+     +"<font color=red>Crop Images:</font> If the user wants to reduce the size of images, there is the option of cropping the images (manual)<br><font color=red>Remove Background:</font> The subtract background plugin is used (rolling ball of 250px expecting light background). "
+     +"This can be a slow process depending on the image size<br><font color=red>Correct White Balance:</font> If this option is selected (default), then the macro will correct the white balance, based on the region of interest selected (see next parameter)<br>"
+     +"<font color=red>Correction Region:</font> For the correction of RGB images a region of interest is required. The user can manually select this region (usually sample free), or the macro can select a region of 400x400 px from the corners or the center of the image<br>"
+     +"<font color=red>Set the pixel size:</font> If this option is selected, then the pixel size will be changed, according to the user's selection<br>"
+     +"<font color=red>Objectives:</font> In order to use the correct pixel size for the images, the magnification is required (in case the EVOS system is used). By selecting the --- option, the actual pixel size in um needs to be entered<br>"
      +"<font color=red>OMERO Upload:</font> If selected, a new window will ask further questions for the login information. Resulted images will also be saved locally<br><font color=red>Omero Server Address:</font> The default address for the Omero of the Multiscale Imaging Platform. Change this for uploading on a different server<br>"
      +"<font color=red>Omero Server Port:</font> The default port for the Omero of the Multiscale Imaging Platform. Change this for uploading on a different server<br></font>";
 html2 = "<html><h1><u>Help page for RGB images correction and Calibration Macro</u></h1><font><br><b>Requirements / Dependencies</b><br>The macro requires the Omero macro extensions from the following address:<br><a href=\"https://github.com/GReD-Clermont/omero_macro-extensions/releases/tag/1.3.2/\">https://github.com/GReD-Clermont/omero_macro-extensions/releases/tag/1.3.2/</a><<br>"
@@ -28,7 +31,7 @@ html2 = "<html><h1><u>Help page for RGB images correction and Calibration Macro<
      
 run("OMERO Extensions");
 // Create dialog, create save folders, and select file(s) to process
-Objectives=newArray("---", " 4x","10x","20x","40x");
+Objectives=newArray("---", "2x", "4x","10x","20x","40x");
 AreaSelection=newArray("Manual","Center", "Top Left Corner", "Middle Left Side");
 
 Dialog.create("Correct and calibrate RGB Images");
@@ -36,7 +39,9 @@ Dialog.addMessage("Parameters");
 Dialog.addString("Name of saving folder: ", "_Corrected", 40);
 Dialog.addCheckbox("Crop Images?", false);
 Dialog.addCheckbox("Remove Background? (Can take time)", false);
+Dialog.addCheckbox("Correct White Balance?", true);
 Dialog.addChoice("Correction Region", AreaSelection);
+Dialog.addCheckbox("Set the pixel size?", true);
 Dialog.addChoice("Objectives (for EVOS@CIGL)", Objectives, "20x");
 Dialog.addCheckbox("Upload to OMERO", false);
 Dialog.addString("Omero Server Address: ", "wss://omero.innere.fb11.uni-giessen.de/omero-ws", 50);
@@ -48,12 +53,17 @@ Dialog.show();
 save_folder=Dialog.getString();
 crop=Dialog.getCheckbox();
 background=Dialog.getCheckbox();
+white_balance=Dialog.getCheckbox();
 area_Select=Dialog.getChoice();
+set_pixel_size=Dialog.getCheckbox();
 obj=Dialog.getChoice();
 omero_upload=Dialog.getCheckbox();
 omero_adr=Dialog.getString();
 omero_port=Dialog.getNumber();
-if(obj=="4x"){
+if(obj=="2x"){
+	pix_x=3.1041;
+	pix_y=3.1041;
+}else if(obj=="4x"){
 	pix_x=1.55205;
 	pix_y=1.55205;
 }else if(obj=="10x"){
@@ -131,13 +141,13 @@ new_folder=SAVE_DIR + sep + save_folder;
 File.makeDirectory(new_folder);
 run("Input/Output...", "jpeg=85 gif=-1 file=.xls copy_row save_column save_row");
 
-if(area_Select != "Manual" && crop == false){
+if((area_Select != "Manual" && crop == false) || white_balance==false){
 	setBatchMode(true);
 }
 
 for (k=0;k<Filelist.length;k++)
 {
-	if(!endsWith(Filelist[k], sep))
+	if(!endsWith(Filelist[k], sep) && (endsWith(Filelist[k], ".tif")||endsWith(Filelist[k], ".tiff")||endsWith(Filelist[k], ".TIF")||endsWith(Filelist[k], ".TIFF")||endsWith(Filelist[k], ".jpg")||endsWith(Filelist[k], ".JPG")||endsWith(Filelist[k], ".jpeg")||endsWith(Filelist[k], ".JPEG")))
 	{
 		run("Bio-Formats Macro Extensions");
 		Ext.setId(SourceDir+sep+Filelist[k]);
@@ -172,42 +182,49 @@ for (k=0;k<Filelist.length;k++)
 				run("Crop");
 			}
 			getDimensions(width, height, channels, slices, frames);
-			if(area_Select == "Manual"){
-				waitForUser("Draw a region over an empty area and then press OK");
-			}else if(area_Select == "Center"){
-				makeRectangle(width/4, height/4, 2*(width/5), 2*(height/5));
-			}else if(area_Select == "Top Left Corner"){
-				makeRectangle(50, 50, 450, 450);
-			}else if(area_Select == "Middle Left Side"){
-				makeRectangle(50, height/2, 450, 450);
+			if(white_balance)
+			{
+				if(area_Select == "Manual"){
+					waitForUser("Draw a region over an empty area and then press OK");
+				}else if(area_Select == "Center"){
+					makeRectangle(width/4, height/4, 2*(width/5), 2*(height/5));
+				}else if(area_Select == "Top Left Corner"){
+					makeRectangle(50, 50, 450, 450);
+				}else if(area_Select == "Middle Left Side"){
+					makeRectangle(50, height/2, 450, 450);
+				}
+				roiManager("add");
+				run("Make Composite");
+				run("Split Channels");
+				MeanColor=newArray(3);
+				maxi = 0;
+				for (u=1; u<4; u++) {
+				selectWindow("C"+u+"-"+name);
+				roiManager("select", 0);
+				getStatistics(area, mean);
+				MeanColor[u-1] = mean;
+				if (mean>=maxi) maxi = mean;
+				}
+				
+				for (u=1; u<4; u++) {
+				selectWindow("C"+u+"-"+name);
+				run("Select None");
+				run("Multiply...", "value="+maxi/MeanColor[u-1]+" slice");
+				}
+				
+				run("Merge Channels...", "c1=C1-"+name+" c2=C2-"+name+" c3=C3-"+name+" create");
+				
+				run("RGB Color");
 			}
-			roiManager("add");
-			run("Make Composite");
-			run("Split Channels");
-			MeanColor=newArray(3);
-			maxi = 0;
-			for (u=1; u<4; u++) {
-			selectWindow("C"+u+"-"+name);
-			roiManager("select", 0);
-			getStatistics(area, mean);
-			MeanColor[u-1] = mean;
-			if (mean>=maxi) maxi = mean;
-			}
-			
-			for (u=1; u<4; u++) {
-			selectWindow("C"+u+"-"+name);
-			run("Select None");
-			run("Multiply...", "value="+maxi/MeanColor[u-1]+" slice");
-			}
-			
-			run("Merge Channels...", "c1=C1-"+name+" c2=C2-"+name+" c3=C3-"+name+" create");
-			
-			run("RGB Color");
 			if(background){
 				run("Subtract Background...", "rolling=250 light");
 			}
 			rename(name);
-			setVoxelSize(pix_x, pix_y, 1, "micron");
+			
+			if(set_pixel_size){
+				setVoxelSize(pix_x, pix_y, 1, "micron");
+			}
+			
 			if(omero_upload){
 				run("OMERO Extensions");
 				succes_connection=Ext.connectToOMERO(omero_adr, omero_port, username, password);
