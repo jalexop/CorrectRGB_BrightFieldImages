@@ -15,8 +15,6 @@ ImageJ macro for the correction of RGB bright field images. Extra options for ba
 <b>Remove Background:</b> The subtract background plugin is used (rolling ball of 250px expecting light background). This can be a slow process depending on the image size<br>
 <b>Correct White Balance:</b> If this option is selected (default), then the macro will correct the white balance, based on the region of interest selected (see next parameter)<br>
 <b>Correction Region:</b> For the correction of RGB images a region of interest is required. The user can manually select this region (usually sample free), or the macro can select a region of 400x400 px from the corners or the center of the image<br>
-<b>Set the pixel size:</b> If this option is selected, then the pixel size will be changed, according to the user's selection<br>
-<b>Objectives:</b> In order to use the correct pixel size for the images, the magnification is required (in case the EVOS system is used). By selecting the --- option, the actual pixel size in um needs to be entered<br>
 <b>OMERO Upload:</b> If selected, a new window will ask further questions for the login information. Resulted images will also be saved locally<br>
 <b>Omero Server Address:</b> The default address for the Omero of the Multiscale Imaging Platform. Change this for uploading on a different server<br>
 <b>Omero Server Port:</b> The default port for the Omero of the Multiscale Imaging Platform. Change this for uploading on a different server<br>
